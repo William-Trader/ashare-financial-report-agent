@@ -1,0 +1,11 @@
+venv/
+.venv/
+data/
+__pycache__/
+*.pyc
+.git/
+.DS_Store
+node_modules/
+*.docx
+*.tar.gz
+deploy/

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+requests
+akshare
+pdfplumber
+jinja2
+python-multipart

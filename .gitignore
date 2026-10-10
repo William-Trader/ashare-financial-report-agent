@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# 数据与凭据（绝不入库）
+data/
+*.db
+*.sqlite
+.env
+.llm.env
+qqbot.json
+
+# 前端构建产物
+node_modules/
+
+# 系统
+.DS_Store
+*.log

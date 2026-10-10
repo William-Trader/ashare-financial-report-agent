@@ -1,0 +1,10 @@
+[Unit]
+Description=财报分析智能体 · 自选股扫描
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/fr-agent/backend
+Environment=FR_DATA_DIR=/home/ubuntu/fr-agent/data
+ExecStart=/home/ubuntu/fr-agent/venv/bin/python -m app.scanner

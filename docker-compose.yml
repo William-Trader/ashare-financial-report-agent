@@ -1,0 +1,18 @@
+services:
+  fr-agent:
+    build: .
+    image: financial-report-claw:latest
+    container_name: fr-agent
+    ports:
+      - "80:80"
+    environment:
+      - FR_DATA_DIR=/app/data
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    # 2-core friendly: keep background jobs from starving the site
+    deploy:
+      resources:
+        limits:
+          memory: 1g
