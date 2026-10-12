@@ -69,13 +69,35 @@ def run(code, wacc=0.09, g1=0.08, years=5, g_term=0.03, growth_fade=True, clamp=
     except Exception:
         pass
     _fin = any(k in _ind for k in ('银行', '保险', '证券', '信托', '多元金融'))
+
+    # 周期股检测 + 中周期归一化（避免用顶点利润做 DCF 系统性高估）
+    _CYC_KW = ('有色','黄金','煤炭','钢铁','石油','化工','建材','采矿','能源','燃气','铜','铝','锂','稀土','贵金属')
+    _NAME_KW = ('矿','煤','钢','油','有色','黄金','铜','铝','锂','稀土','化工','建材','燃气','能源')
+    _nm0 = canon.get('name') or ''
+    _cyc = any(k in _ind for k in _CYC_KW) or any(k in _nm0 for k in _NAME_KW)
+
+    def _cyc_block(base_ps):
+        if not _cyc:
+            return None
+        rows = (r.get('indicators') or {}).get('rows') or []
+        gms = [((row.get('indices') or {}).get('毛利率%')) for row in rows]
+        gms = [x for x in gms if isinstance(x, (int, float))]
+        if not gms:
+            return {'cyclical': True, 'note': '周期股：缺少历史毛利率，无法做中周期归一化。'}
+        now = gms[0]
+        avg = sum(gms) / len(gms)
+        pos = '高位' if now > avg * 1.15 else ('低位' if now < avg * 0.85 else '中位')
+        why = ('当前为峰值利润，DCF 会系统性高估' if pos == '高位' else ('当前为谷底利润，DCF 会系统性低估' if pos == '低位' else '当前接近中周期'))
+        note = ('周期股估值陷阱：DCF 用当前盈利；当前处周期' + pos + '（毛利率 ' + str(round(now,1)) + '% vs 历史均值 ' + str(round(avg,1)) + '%），' + why + '。建议以中周期利润估值：按历史均值归一化后每股约 ' + str(round(base_ps*(avg/now),2) if (base_ps and now) else None) + ' 元。')
+        return {'cyclical': True, 'margin_now': round(now,1), 'margin_avg': round(avg,1), 'cycle_position': pos, 'normalized_per_share': (round(base_ps*(avg/now),2) if (base_ps and now) else None), 'note': note}
+
     if fcf0 <= 0 or _fin:
         rel0 = _rel()
         why = (('金融行业（' + _ind + '）不适用 FCFF 自由现金流折现') if _fin
                else ('自由现金流为负或缺失（' + str(d) + '）'))
         pct = rel0.get('pe_percentile')
         return {'ok': True, 'method': 'relative', 'code': canon.get('code'), 'name': canon.get('name'),
-                'basis_period': d, 'relative': rel0, 'dcf': None, 'sensitivity': None,
+                'basis_period': d, 'relative': rel0, 'dcf': None, 'sensitivity': None, 'cycle': _cyc_block(None),
                 'reason': why + '，DCF 不适用，已改用相对估值（PE/PB 历史分位）。',
                 'verdict': {'price': price, 'pe_percentile': rel0.get('pe_percentile'),
                             'pb_percentile': rel0.get('pb_percentile'),
@@ -124,7 +146,7 @@ def run(code, wacc=0.09, g1=0.08, years=5, g_term=0.03, growth_fade=True, clamp=
         dev = (base_ps / price - 1) * 100
         if abs(dev) > 60:
             sanity = ('DCF 基准较市价偏离 %.0f%%，请优先复核资本开支代理与增速假设（矩阵已给出区间）' % dev)
-    return {'ok': True, 'sanity': sanity, 'code': canon.get('code'), 'name': canon.get('name'), 'basis_period': d,
+    return {'ok': True, 'sanity': sanity, 'code': canon.get('code'), 'name': canon.get('name'), 'basis_period': d, 'cycle': _cyc_block(base_ps),
             'assumptions': {'wacc': wacc, 'stage1_growth': g1, 'years': years, 'terminal_growth': g_term,
                             'growth_fade': growth_fade, 'capex_proxy': capex_src},
             'inputs': {'fcf0': fcf0, 'ocf': ocf, 'capex_proxy': capex, 'net_debt': net_debt,

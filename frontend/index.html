@@ -306,6 +306,29 @@ function recent(){try{return JSON.parse(localStorage.getItem('fr_recent')||'[]')
 function rec(o){try{var r=recent().filter(function(x){return x.code!==o.code});r.unshift(o);localStorage.setItem('fr_recent',JSON.stringify(r.slice(0,24)))}catch(e){}}
 function rcCard(){var R=recent();return R.length?('<div class="card" style="margin-top:13px"><h3>最近分析 <span class="muted">本机历史</span><span style="float:right;font-size:13px"><a href="javascript:go(\'market\')">全市场 →</a></span></h3><div class="row" style="flex-wrap:wrap">'+R.slice(0,18).map(function(x){return '<a href="javascript:go(\'stock\',\''+x.code+'\')" style="padding:6px 12px;margin:4px;border:1px solid #2a2f3a;border-radius:6px;text-decoration:none"><span class="num">'+esc(x.code)+'</span> '+esc(x.name||'')+'</a>'}).join('')+'</div></div>'):''}
 function go(v,arg){location.hash='#/'+v+(arg?('/'+arg):'')}
+async function Vresearch(){var m=el('main');
+ m.innerHTML='<div class="ph"><h1>全市场分析库</h1><div class="sub">云端批量分析（只读缓存）</div><div class="sp"></div><button class="btn pri" onclick="rStart()">启动/续跑</button> <button class="btn" onclick="Vresearch()">刷新</button></div><div id="rsum">'+sk(4)+'</div><div id="rls" style="margin-top:12px">'+sk(5)+'</div>';
+ var s=await jget('/api/research/summary');
+ if(el('rsum')){ if(s&&s.ok){var bl=function(a,k,v){for(var i=0;i<(a||[]).length;i++)if(a[i][k]===v)return a[i].count;return 0};
+   el('rsum').innerHTML='<div class="grid k4">'+kv('已分析',s.analyzed,'全市场')+kv('高风险·规避',bl(s.by_level,'level','高'),'','up')+kv('中风险·谨慎',bl(s.by_level,'level','中'),'','w')+kv('低风险·关注',bl(s.by_level,'level','低'),'','dn')+'</div>';}
+  else el('rsum').innerHTML='<div class="card">暂无法读取分析库</div>';}
+ var r=await jget('/api/research/results?limit=100&sort=risk');
+ if(el('rls')){ if(r&&r.ok&&r.items){ el('rls').innerHTML='<div class="card"><h3>分析结果 <span class="muted">前 '+r.items.length+' / 共 '+(r.count||r.items.length)+'</span></h3><div class="scroll" style="max-height:none"><table><thead><tr><th>代码</th><th>名称</th><th>风险分</th><th>等级</th><th>结论</th><th>赛道</th></tr></thead><tbody>'+r.items.map(function(x){return '<tr style="cursor:pointer" onclick="go(\'stock\',\''+x.code+'\')"><td class="num">'+esc(x.code)+'</td><td>'+esc(x.name)+'</td><td class="num">'+(x.risk_score==null?'—':n2(x.risk_score))+'</td><td>'+esc(x.risk_level||'')+'</td><td>'+esc(x.verdict||'')+'</td><td class="muted">'+esc(x.track_name||'')+'</td></tr>'}).join('')+'</tbody></table></div></div>';}
+  else el('rls').innerHTML='<div class="card">暂无分析结果</div>';}
+}
+async function rStart(){await jget('/api/research/start');setTimeout(Vresearch,1500)}
+async function Vtracks(){var m=el('main');
+ m.innerHTML='<div class="ph"><h1>财报赛道</h1><div class="sub">全市场按财报画像分层（确定性规则）</div><div class="sp"></div></div><div id="tk">'+sk(6)+'</div>';
+ var j=await jget('/api/tracks');
+ if(el('tk')){ if(j&&j.ok&&j.tracks){ el('tk').innerHTML=j.tracks.map(function(t){return '<div class="card" style="margin-top:12px"><h3><span style="color:'+esc(t.color||'#c9a45c')+'">●</span> '+esc(t.name)+' <span class="muted">'+t.count+' 家</span></h3><div class="hint">'+esc(t.desc||'')+'</div><div class="row" style="flex-wrap:wrap;margin-top:6px">'+(t.top||[]).slice(0,12).map(function(x){return '<a href="javascript:go(\'stock\',\''+x.code+'\')" style="padding:4px 10px;margin:3px;border:1px solid #2a2f3a;border-radius:6px;text-decoration:none"><span class="num">'+esc(x.code)+'</span> '+esc(x.name)+'</a>'}).join('')+'</div></div>'}).join('');}
+  else el('tk').innerHTML='<div class="card">暂无法读取赛道数据</div>';}
+}
+async function Vlab(){var m=el('main');
+ m.innerHTML='<div class="ph"><h1>回测实验室</h1><div class="sub">多报告期随机事件因子回测（无未来函数）</div><div class="sp"></div><button class="btn pri" onclick="Vlab()">刷新</button></div><div id="lb">'+sk(5)+'</div>';
+ var j=await jget('/api/lab/run?rounds=100',60000);
+ if(el('lb')){ if(j&&j.ok){ el('lb').innerHTML='<div class="grid k4">'+kv('轮次',(j.rounds||'—'),'有效')+kv('平均超额',(j.avg_excess==null?'—':n2(j.avg_excess)+'%'),'')+kv('胜率',(j.win_rate==null?'—':n2(j.win_rate)+'%'),'')+kv('平均IC',(j.avg_ic==null?'—':n2(j.avg_ic)),'')+'</div><div class="hint" style="margin-top:8px">首次冷计算较慢，结果已缓存。</div>';}
+  else el('lb').innerHTML='<div class="card">回测数据暂不可用</div>';}
+}
 function route(){var h=location.hash.replace(/^#\/?/,''),p=h.split('/'),v=p[0]||'dash';
  [].forEach.call(document.querySelectorAll('#nav a'),function(a){a.classList.toggle('on',a.dataset.v===v)});
  clearCharts();

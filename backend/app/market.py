@@ -222,12 +222,17 @@ def _all_rows_for(date, ttl):
 CANDIDATES = ['20260930', '20260630', '20260331', '20251231', '20250930']
 
 
-def latest_period(ttl=6 * 3600):
+def latest_period(ttl=6 * 3600, min_rows=500):
     """按新到旧探测有数据的报告期（修复数据滞后）。"""
+    best = None
     for d in CANDIDATES:
-        if _all_rows_for(d, ttl):
-            return d
-    return CANDIDATES[0]
+        rows = _all_rows_for(d, ttl)
+        if rows:
+            if best is None:
+                best = d
+            if len(rows) >= min_rows:
+                return d
+    return best or CANDIDATES[0]
 
 
 def all_rows(date='20260630', ttl=6 * 3600, force=False):
