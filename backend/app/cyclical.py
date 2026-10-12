@@ -251,7 +251,38 @@ def run(code, price_yoy=None, commodity_share=0.6):
         'stress_test': stress_test(indices, commodity_share=commodity_share),
         'price_volume_split': price_volume_split(rep, indices, price_yoy=price_yoy),
         'segment_split': segment_split(code),
+        'chain_position': chain_position(code),
         'goodwill_intangibles': goodwill_intangibles(indices),
         'risk': r.get('risk'),
         'note': '周期股时序纪律：deep_analysis 必须与 analyze 同轮调齐、先交叉再下结论（见 agent_core）。',
     }
+
+
+CHAIN_STAGE = {
+    '上游(资源/采矿)': ('矿', '采', '资源', '原料', '勘探', '选矿', '精矿', '矿石', '油气', '煤层'),
+    '中游(冶炼/加工)': ('冶炼', '精炼', '加工', '材料', '合金', '铸', '中间品', '阴极', '电积', '化工', '发酵'),
+    '下游(制造/终端)': ('制造', '设备', '终端', '消费', '品牌', '整车', '电池', '组件', '器件', '系统', '整机'),
+    '流通(贸易/销售)': ('贸易', '销售', '物流', '分销', '商贸', '零售'),
+}
+
+
+def chain_position(code):
+    """产业链位置（启发式）：按主营构成产品名关键词归类：上游/中游/下游/流通。"""
+    seg = _segments(code)
+    if not seg:
+        return {'ok': False, 'reason': '主营构成不可用（akshare）'}
+    lr = seg['latest_rows']
+    total = sum(lr.values()) or 1
+    agg = {}
+    for name, rev in lr.items():
+        stage = '其他/未分类'
+        for st, kws in CHAIN_STAGE.items():
+            if any(k in name for k in kws):
+                stage = st
+                break
+        agg[stage] = agg.get(stage, 0) + rev
+    rows = [{'stage': k, 'revenue': v, 'share_pct': round(v / total * 100, 1)} for k, v in agg.items()]
+    rows.sort(key=lambda x: -x['revenue'])
+    return {'ok': True, 'report_period': seg['latest'], 'stages': rows,
+            'position': (rows[0]['stage'] if rows else None),
+            'note': '产业链位置：按主营构成产品名关键词启发式归类（上游=资源/采矿、中游=冶炼/加工、下游=制造/终端、流通=贸易）。这是「公司处于链条哪一环」的启发式，不是供应链上下游映射。'}
