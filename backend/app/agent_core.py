@@ -174,6 +174,21 @@ def _tool_cyclical(code):
 
 
 
+def _tool_capital(code):
+    from . import capital
+    c = capital.run(code)
+    if not c.get('ok'):
+        return {'error': c.get('reason')}
+    if not c.get('applicable', True):
+        return {'note': c.get('reason'), 'industry': c.get('industry')}
+    return {'name': c.get('name'), 'period': c.get('period'), 'industry': c.get('industry'),
+            'ROIC年化%': c.get('roic_annual_pct'), 'ROE年化%': c.get('roe_annual_pct'),
+            'WACC%': round((c.get('wacc') or 0) * 100, 2), '价差pp': c.get('spread_pct'),
+            'EVA亿元': c.get('eva_annual_yi'), 'NOPAT率%': c.get('nopat_margin_pct'),
+            '资本周转': c.get('capital_turnover_annual'), '投入资本亿元': (c.get('inputs') or {}).get('invested_capital_yi'),
+            '判读': (c.get('verdict') or {}).get('level'), '结论': (c.get('verdict') or {}).get('read'),
+            '提示': [f.get('name') for f in (c.get('flags') or [])]}
+
 TOOLS = [
     {'type': 'function', 'function': {'name': 'analyze', 'description': '分析一家公司财报：三表+指标+勾稽+异常+风险+建议', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string', 'description': '6位股票代码'}}, 'required': ['code']}}},
     {'type': 'function', 'function': {'name': 'deep_analysis', 'description': '财报深析：杜邦/周转/现金流形态/盈利质量/税负/资产质量/评分卡/红旗', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string'}}, 'required': ['code']}}},
@@ -190,6 +205,7 @@ TOOLS = [
     {'type': 'function', 'function': {'name': 'dividend', 'description': '分红历史', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string'}}, 'required': ['code']}}},
     {'type': 'function', 'function': {'name': 'fundflow', 'description': '近期主力资金净流入', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string'}}, 'required': ['code']}}},
     {'type': 'function', 'function': {'name': 'cyclical', 'description': '周期股专项：量价拆分/情景压力测试/科目穿透/异常三级定性（有色/煤炭/钢铁/石油/化工/建材/采矿等重资产）', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string'}}, 'required': ['code']}}},
+    {'type': 'function', 'function': {'name': 'capital', 'description': '资本回报与价值创造：ROIC/WACC/EVA 价差、投入资本回报拆解、ROE-ROIC 杠杆差（非金融企业）', 'parameters': {'type': 'object', 'properties': {'code': {'type': 'string'}}, 'required': ['code']}}},
 ]
 
 DISPATCH = {
@@ -208,13 +224,14 @@ DISPATCH = {
     'dividend': lambda a: _tool_dividend(a.get('code')),
     'fundflow': lambda a: _tool_fundflow(a.get('code')),
     'cyclical': lambda a: _tool_cyclical(a.get('code')),
+    'capital': lambda a: _tool_capital(a.get('code')),
 }
 
 
 SIMPLE_HINTS = ('多少', '是什么', '啥', '几倍', '价格', '股价', '现价', '市值', '行情', 'pe', 'pb',
                 '净现比', '毛利率', '净利率', 'roe', '资产负债率', '扣非', '收现比', '分红', '换手')
 DEEP_HINTS = ('分析', '值得', '风险', '对比', '比较', '为什么', '怎么样', '如何', '估值', '深析', '体检',
-              '逻辑', '看好', '前景', '诊断', '点评', '该不该', '能不能买', '财报怎么样', '靠谱', '有问题')
+              '逻辑', '看好', '前景', '诊断', '点评', '该不该', '能不能买', '财报怎么样', '靠谱', '有问题', '回报', '效率', '杠杆')
 
 
 def _pick_deep(text):

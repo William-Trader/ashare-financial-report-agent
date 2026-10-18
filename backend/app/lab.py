@@ -46,7 +46,17 @@ def _snap(date):
     return {r['code']: r for r in rows}
 
 
+_PREP = None
+
+
 def _prep():
+    global _PREP
+    if _PREP is None:
+        _PREP = _prep_raw()
+    return _PREP
+
+
+def _prep_raw():
     kl = bt._kl_all()
     cache = {}
     for d, t0 in PERIODS:

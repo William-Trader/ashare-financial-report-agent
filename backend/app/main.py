@@ -100,10 +100,18 @@ def optimize_view(iterations: int = 12):
 
 @app.get('/api/eval')
 @perf.ttl_cache(3600)
-def eval_view(draws: int = 400):
-    """评估实验室：数百轮横截面 + 预测量效 + 造假案例命中。"""
+def eval_view(draws: int = 400, fraud: int = 0, live: int = 0):
+    """评估实验室：默认返回预计算结果（零现场计算，演示友好）；live=1 现场重算。"""
+    import json as _json
+    if not live:
+        _p = os.path.join(os.path.dirname(warehouse.DB), 'eval_precomputed.json')
+        try:
+            with open(_p, encoding='utf-8') as _f:
+                return _json.load(_f)
+        except Exception:
+            pass
     from . import eval_lab
-    return eval_lab.all_eval(draws)
+    return eval_lab.all_eval(draws, with_fraud=bool(fraud))
 
 
 @app.get('/api/fraudcases')
@@ -158,6 +166,13 @@ def cyclical_view(code: str, price_yoy: float = None, commodity_share: float = 0
     return cyclical.run(code, price_yoy=price_yoy, commodity_share=commodity_share)
 
 
+@app.get('/api/capital/{code}')
+def capital_view(code: str, wacc: float = 0.09):
+    """资本回报与价值创造：ROIC / WACC / EVA / 投入资本回报拆解（非金融企业）。"""
+    from . import capital
+    return capital.run(code, wacc=wacc)
+
+
 @app.get('/api/about')
 def about():
     """作品元信息：选题方向与能力边界。"""
@@ -166,7 +181,7 @@ def about():
             'positioning': '面向上市公司财务报告的独立自持分析智能体：三表加工、口径守卫、异常与背离识别、深析与估值、赛道分类与对比、无未来函数回测。',
             'modules': ['三表提取', '指标库', '勾稽校验', '异常识别', '财报体检', '财报深析', '红旗库',
                         '法证评分', '估值建模', '研报纠错', '财报赛道', '财报对比', '赛道对标', '多因子选股',
-                        '因子分层', '组合风控', '圆桌研判', '结论校准', '云端批量分析', '自持 Agent', '无未来函数回测'],
+                        '因子分层', '资本回报 ROIC/EVA', '组合风控', '圆桌研判', '结论校准', '云端批量分析', '自持 Agent', '无未来函数回测'],
             'version': '1.0'}
 
 
@@ -462,6 +477,7 @@ def get_announce(code: str, n: int = 30, extract: int = 4, llm: int = 1):
 
 
 @app.get('/api/caliber/{code}')
+@perf.ttl_cache(600)
 def get_caliber(code: str, ttl: int = 6 * 3600):
     """口径守卫：声明口径 + 边界告警（金融股/中期未年化/单季不可推算/同比基准缺失等）。"""
     r = _wrap(code, ttl, advanced=False)
@@ -474,6 +490,7 @@ def get_caliber(code: str, ttl: int = 6 * 3600):
 
 
 @app.get('/api/thesis/{code}')
+@perf.ttl_cache(900)
 def get_thesis(code: str, deep: int = 1):
     """投资逻辑闭环（深度推演，默认走推理档模型）。"""
     return thesis.run(code, use_deep=bool(deep))
@@ -644,6 +661,7 @@ def perf_clear():
 
 
 @app.get('/api/warehouse/stats')
+@perf.ttl_cache(300)
 def warehouse_stats():
     return warehouse.stats()
 
@@ -703,6 +721,7 @@ def portfolio_risk(req: PortfolioReq):
 
 
 @app.get('/api/roundtable/{code}')
+@perf.ttl_cache(900)
 def roundtable(code: str):
     return roundtable_mod.run(code)
 
@@ -752,6 +771,7 @@ def get_fundflow(code: str, lmt: int = 30):
 
 
 @app.get('/api/market/digest')
+@perf.ttl_cache(120)
 def market_digest(date: str = '', ttl: int = 6 * 3600):
     try:
         return market.digest(date, ttl)
@@ -811,16 +831,29 @@ def research_summary():
 
 @app.get('/api/backtest')
 @perf.ttl_cache(3600)
-def backtest_view(t0: str = '2026-09-01'):
-    """无未来函数回测：10 个策略轮次。"""
-    from . import backtest
+def backtest_view(t0: str = '2026-09-01', live: int = 0):
+    """无未来函数回测：10 个策略轮次（默认预计算结果，零现场计算）。"""
+    import json as _json
+    if not live:
+        try:
+            with open(os.path.join(os.path.dirname(warehouse.DB), 'backtest_precomputed.json'), encoding='utf-8') as _f:
+                return _json.load(_f)
+        except Exception:
+            pass
     return backtest.run_all(t0)
 
 
 @app.get('/api/lab/run')
 @perf.ttl_cache(1800)
-def lab_run(rounds: int = 100, seed: int = 20261007):
-    """回测实验室：多期随机事件财报因子回测 + 迭代。"""
+def lab_run(rounds: int = 100, seed: int = 20261007, live: int = 0):
+    """回测实验室：默认返回预计算结果（零现场计算）；live=1 现场重算。"""
+    import json as _json
+    if not live:
+        try:
+            with open(os.path.join(os.path.dirname(warehouse.DB), 'lab_precomputed.json'), encoding='utf-8') as _f:
+                return _json.load(_f)
+        except Exception:
+            pass
     from . import lab
     return lab.run(rounds, seed)
 

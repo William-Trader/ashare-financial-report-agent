@@ -84,5 +84,7 @@ def fraud_summary():
             'cases': r.get('cases') or []}
 
 
-def all_eval(draws=400):
-    return {'ok': True, 'cross_section': cross_section(draws), 'risk_power': risk_power(), 'fraud': fraud_summary()}
+def all_eval(draws=400, with_fraud=False):
+    out = {'ok': True, 'cross_section': cross_section(draws), 'risk_power': risk_power()}
+    out['fraud'] = fraud_summary() if with_fraud else {'ok': False, 'reason': '造假子步较慢，已拆到 /api/fraudcases（或 /api/eval?fraud=1）'}
+    return out

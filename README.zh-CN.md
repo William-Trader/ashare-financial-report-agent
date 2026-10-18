@@ -27,6 +27,7 @@
 | 估值建模 | DCF(FCFF) + 相对估值 + 5×5 敏感性矩阵 + 区间 + 市价对比 |
 | 研报纠错 | 规则层 + LLM 层逐条核验数值/口径/期间/来源/逻辑 |
 | 全市场选股 | 多因子打分 + 因子分层 + 财报赛道分类 |
+| 资本回报 | ROIC / WACC / EVA 价差、投入资本回报拆解、ROE-ROIC 杠杆差 |
 | 组合风控 | VaR / CVaR / β / 最大回撤 / 风险贡献 / 最小方差 / 风险平价 |
 | 结论校准 | 命中率 / Brier 分数，5 交易日 horizon 复盘 |
 | 证据链 | 审计 jsonl + 合规元数据 + 幻觉拦截 |
@@ -106,6 +107,7 @@ backend/app/agent_core.py 是一个完整的 LLM + 工具调用循环：
     GET  /api/screener                    全市场多因子选股
     GET  /api/market/digest               全市场异动摘要
     POST /api/portfolio/risk              组合风控
+    GET  /api/capital/{code}              资本回报 ROIC/WACC/EVA
     GET  /api/roundtable/{code}           五角色圆桌研判
     POST /api/report_check                研报纠错
     POST /api/agent/ask                   自持 Agent 对话入口（LLM+工具）

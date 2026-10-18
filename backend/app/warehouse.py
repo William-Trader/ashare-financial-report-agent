@@ -135,7 +135,11 @@ def stats():
     with cursor() as c:
         for t in ('stocks', 'statements', 'indicators', 'kline', 'market_snap', 'events'):
             try:
-                out[t] = c.execute('SELECT COUNT(*) FROM ' + t).fetchone()[0]
+                if t == 'kline':
+                    out[t] = c.execute('SELECT MAX(rowid) FROM kline').fetchone()[0] or 0
+                    out[t + '_approx'] = True
+                else:
+                    out[t] = c.execute('SELECT COUNT(*) FROM ' + t).fetchone()[0]
             except Exception:
                 out[t] = None
         out['snap_dates'] = [r[0] for r in c.execute('SELECT DISTINCT snap_date FROM market_snap ORDER BY snap_date DESC LIMIT 12').fetchall()]

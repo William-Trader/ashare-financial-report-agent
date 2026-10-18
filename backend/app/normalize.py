@@ -31,6 +31,9 @@ BS_FIELDS = [
     ('SURPLUS_RESERVE', '盈余公积'),
     ('OTHER_COMPRE_INCOME', '其他综合收益'),
     ('TOTAL_PARENT_EQUITY', '归母权益合计'),
+    ('NONCURRENT_LIAB_1YEAR', '一年内到期的非流动负债'),
+    ('BOND_PAYABLE', '应付债券'),
+    ('LEASE_LIAB', '租赁负债'),
 ]
 
 IS_FIELDS = [
